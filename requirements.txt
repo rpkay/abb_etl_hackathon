@@ -1,0 +1,8 @@
+pandas
+sqlalchemy
+psycopg2-binary
+lxml
+flask
+prometheus_client
+requests
+pyarrow
