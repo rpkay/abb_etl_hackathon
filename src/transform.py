@@ -8,6 +8,8 @@ from sqlalchemy import create_engine
 from typing import Dict
 from dotenv import load_dotenv
 
+from utils import log_etl_metadata
+
 # Set up base paths
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAW_BASE = Path(os.path.join(BASE_PATH, "data", "raw"))
@@ -26,21 +28,9 @@ def ingest_to_postgres(
     if_exists: str = "append"
 ):
     """
-    Ingest multiple pandas DataFrames into PostgreSQL using credentials from .env file.
-
-    Expected .env file variables:
-        POSTGRES_DB       -> database name
-        POSTGRES_USER     -> username
-        POSTGRES_PASSWORD -> password
-        POSTGRES_HOST     -> host (default: localhost)
-        POSTGRES_PORT     -> port (default: 5432)
-
-    Args:
-        tables (dict): Dictionary of {table_name: dataframe}.
-        schema (str): Target schema (default: public).
-        if_exists (str): Behavior if table exists ('replace', 'append', 'fail').
+    Ingest multiple pandas DataFrames into PostgreSQL and log ETL metadata.
     """
-    # Load environment variables
+
     load_dotenv()
 
     db_name = os.getenv("POSTGRES_DB")
@@ -52,23 +42,42 @@ def ingest_to_postgres(
     if not all([db_name, user, password]):
         raise ValueError("❌ Missing required PostgreSQL credentials in .env file")
 
-    # Create SQLAlchemy connection engine
     conn_str = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db_name}"
     engine = create_engine(conn_str)
 
-    # Ingest tables
     with engine.begin() as conn:
         conn.execute(sqlalchemy.text(f"CREATE SCHEMA IF NOT EXISTS {schema};"))
+
         for table_name, df in tables.items():
             print(f"📦 Loading table '{table_name}' ({len(df)} rows) ...")
-            df.to_sql(
-                name=table_name,
-                con=conn,
-                schema=schema,
-                if_exists=if_exists,
-                index=False
-            )
-    print("✅ All tables successfully ingested into PostgreSQL.")
+            try:
+                df.to_sql(
+                    name=table_name,
+                    con=conn,
+                    schema=schema,
+                    if_exists=if_exists,
+                    index=False
+                )
+                # ✅ Log success
+                log_etl_metadata(
+                    schema_name=schema,
+                    table_name=f"{schema}.{table_name}",
+                    status="SUCCESS",
+                    record_count=len(df),
+                    remarks="Loaded successfully"
+                )
+            except Exception as e:
+                # ❌ Log failure
+                log_etl_metadata(
+                    schema_name=schema,
+                    table_name=f"{schema}.{table_name}",
+                    status="FAILED",
+                    record_count=0,
+                    remarks=str(e)
+                )
+                print(f"❌ Error loading table {table_name}: {e}")
+
+    print("✅ All tables ingested and metadata logged.")
 
 
 def generate_surrogate_key(series: pd.Series) -> pd.Series:
