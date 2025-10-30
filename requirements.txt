@@ -6,3 +6,4 @@ flask
 prometheus_client
 requests
 pyarrow
+python-dotenv
