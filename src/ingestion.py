@@ -76,7 +76,7 @@ def ingest_files():
                     
                     # Partition sales data by date and region
                     for (sale_date, region), part in df.groupby([date_col, region_col]):
-                        part_dir = STAGING_BASE / f"{sale_date.isoformat()}" / f"region_{region}"
+                        part_dir = STAGING_BASE/ 'sales' / f"{sale_date.isoformat()}" / f"region_{region}"
                         part_dir.mkdir(parents=True, exist_ok=True)
                         out_file = part_dir / f"{data_type}_{datetime.utcnow().strftime('%H%M%S')}.parquet"
                         part.to_parquet(out_file, index=False)
