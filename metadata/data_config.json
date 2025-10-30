@@ -1,0 +1,17 @@
+{
+    "raw_files": {
+        "sales": {
+            "filename": "sales_data.csv",
+            "type": "csv"
+        },
+        "region": {
+            "filename": "region_data.xml",
+            "type": "xml",
+            "record_tag": "region"
+        },
+        "product": {
+            "filename": "product_data.json",
+            "type": "json"
+        }
+    }
+}
